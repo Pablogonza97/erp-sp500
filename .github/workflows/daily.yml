@@ -1,0 +1,26 @@
+# Colócalo en .github/workflows/daily.yml
+name: Actualizar datos
+on:
+  schedule:
+    - cron: "30 23 * * 1-5"   # tras el cierre de EE.UU. (UTC)
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance
+      - run: python fetch_data.py
+      - run: |
+          git config user.name "bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data.json
+          if ! git diff --cached --quiet; then
+            git commit -m "datos $(date -I)"
+            git push
+          fi
