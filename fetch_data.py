@@ -11,10 +11,17 @@ def ultimo(ticker):
 def main():
     dia, cierre = ultimo("^GSPC")
     _, bono = ultimo("^TNX")            # ya viene en %, p. ej. 4.15
-    info = yf.Ticker("SPY").info         # PER del S&P 500 vía SPY (proxy)
-    per = info.get("trailingPE") or info.get("forwardPE")
+    eps = None
+    hist_f = pathlib.Path("history.json")
+    if hist_f.exists():                  # EPS "as reported" 12 meses (Shiller), como multpl
+        eps = json.loads(hist_f.read_text())[-1]["eps"]
+    if eps:
+        per = cierre / eps
+    else:                                # alternativa: PER de SPY vía Yahoo
+        info = yf.Ticker("SPY").info
+        per = info.get("trailingPE") or info.get("forwardPE")
     if not per:
-        raise SystemExit("Yahoo no devolvió PER hoy")
+        raise SystemExit("No hay PER hoy")
     ey = 100 / per                       # earnings yield en %
     fila = {"date": dia, "close": round(cierre, 2), "per": round(per, 2), "eps": round(cierre / per, 2),
             "ey": round(ey, 2), "us10y": round(bono, 2), "erp": round(ey - bono, 2)}
