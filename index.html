@@ -72,7 +72,8 @@ function init(){
  document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;mark();draw()});
  const yl=[];for(let y=mn;y<=mx;y++)yl.push(`<option>${y}</option>`);
  $("a").innerHTML=$("b").innerHTML=yl.join("");
- const sync=()=>{$("a").value=y0;$("b").value=y1;draw()};
+ const sync=()=>{$("a").value=y0;$("b").value=y1;
+  document.querySelectorAll("[data-r]").forEach(b=>{const r=+b.dataset.r;b.classList.toggle("on",y1==mx&&y0==(r?Math.max(mn,mx-r):mn))});draw()};
  $("a").onchange=()=>{y0=+$("a").value;if(y0>y1)y1=y0;sync()};
  $("b").onchange=()=>{y1=+$("b").value;if(y1<y0)y0=y1;sync()};
  document.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const r=+b.dataset.r;y0=r?Math.max(mn,mx-r):mn;y1=mx;sync()});
