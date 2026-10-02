@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#0f172a">
 <title>Prima de riesgo S&P 500</title>
 <style>
-:root{--bg:#f8fafc;--card:#fff;--tx:#0f172a;--mut:#64748b;--ac:#2563eb}
-@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--card:#1e293b;--tx:#f1f5f9;--mut:#94a3b8;--ac:#60a5fa}}
+:root{--bg:#f8fafc;--card:#fff;--tx:#0f172a;--mut:#64748b;--ac:#2563eb;--bd:#e2e8f0}
+@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--card:#1e293b;--tx:#f1f5f9;--mut:#94a3b8;--ac:#60a5fa;--bd:#334155}}
 *{box-sizing:border-box}
 body{margin:0;padding:max(16px,env(safe-area-inset-top)) 16px 24px;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif}
 h1{font-size:18px;margin:0 0 4px}.sub{color:var(--mut);font-size:13px;margin-bottom:16px}
@@ -16,29 +16,98 @@ h1{font-size:18px;margin:0 0 4px}.sub{color:var(--mut);font-size:13px;margin-bot
 .hero b{display:block;font-size:44px;color:var(--ac)}.hero span{color:var(--mut);font-size:13px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .c{background:var(--card);border-radius:12px;padding:14px}.c small{color:var(--mut);font-size:12px}.c b{display:block;font-size:22px;margin-top:2px}
-.ch{background:var(--card);border-radius:12px;padding:14px;margin-top:12px}svg{width:100%;height:120px}
-.n{color:var(--mut);font-size:12px;margin-top:14px;line-height:1.4}
+.ch{background:var(--card);border-radius:12px;padding:14px;margin-top:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+button,select{font:inherit;font-size:13px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:6px 10px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+#ro{font-size:13px;color:var(--mut);min-height:36px;margin:6px 0}
+#ch{touch-action:pan-y}svg{display:block}
+.g{stroke:var(--bd);stroke-width:1}.z{stroke:var(--mut);stroke-dasharray:3 3;stroke-width:1}
+.t{fill:var(--mut);font-size:10px}.c0{stroke:var(--mut);stroke-width:1}
+.n{color:var(--mut);font-size:12px;margin-top:14px;line-height:1.5}
 </style></head><body>
-<h1>Prima de riesgo del equity</h1><div class="sub" id="f">Cargando…</div>
-<div id="app"></div>
-<div class="n">ERP = (1/PER) − bono EE.UU. 10 años. PER del S&P 500 estimado vía SPY (Yahoo Finance); puede diferir de otras fuentes.</div>
+<h1>Prima de riesgo del equity · S&P 500</h1><div class="sub" id="f">Cargando…</div>
+<div id="top"></div>
+<div class="ch">
+ <div class="tabs" id="tabs"></div>
+ <div class="tabs"><select id="a"></select><select id="b"></select>
+  <button data-r="10">10 años</button><button data-r="20">20 años</button><button data-r="0">Todo</button></div>
+ <div id="ro"></div><div id="ch"></div>
+</div>
+<div class="n" id="foot"></div>
 <script>
-const f=(n,d=2)=>n.toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
-fetch("data.json?"+Date.now()).then(r=>r.json()).then(h=>{
-  const x=h[h.length-1], p=h[h.length-2];
-  document.getElementById("f").textContent="Cierre del "+x.date.split("-").reverse().join("/");
-  const d=p?x.erp-p.erp:0;
-  let svg="";
-  if(h.length>1){const v=h.map(e=>e.erp),mn=Math.min(...v),mx=Math.max(...v)||1,r=(mx-mn)||1;
-    const pts=v.map((y,i)=>(i/(v.length-1)*300).toFixed(1)+","+(110-(y-mn)/r*100).toFixed(1)).join(" ");
-    svg=`<div class="ch"><small style="color:var(--mut)">Evolución ERP (%)</small><svg viewBox="0 0 300 120" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="var(--ac)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>`}
-  document.getElementById("app").innerHTML=`
-  <div class="hero"><span>Prima de riesgo</span><b>${f(x.erp)}%</b><span>${p?(d>=0?"▲ ":"▼ ")+f(Math.abs(d))+" pp vs. sesión anterior":""}</span></div>
-  <div class="grid">
-   <div class="c"><small>S&P 500 (cierre)</small><b>${f(x.close)}</b></div>
-   <div class="c"><small>PER</small><b>${f(x.per,1)}</b></div>
-   <div class="c"><small>Earnings yield</small><b>${f(x.ey)}%</b></div>
-   <div class="c"><small>Bono EE.UU. 10a</small><b>${f(x.us10y)}%</b></div>
-  </div>${svg}`;
-}).catch(()=>document.getElementById("f").textContent="Sin datos todavía: ejecuta el workflow una vez.");
+const $=id=>document.getElementById(id);
+const f=(n,d=2)=>n==null||isNaN(n)?"–":n.toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
+const ts=r=>Date.parse(r.date.length==7?r.date+"-15":r.date);
+const fd=s=>s.split("-").reverse().join("/");
+const SER={
+ erp:{n:"Prima de riesgo",s:[["erp","Prima (%)","var(--ac)"]]},
+ yld:{n:"Yield vs bono",s:[["ey","Earnings yield (%)","var(--ac)"],["us10y","Bono 10a (%)","#f59e0b"]]},
+ eps:{n:"EPS",s:[["eps","EPS ($, esc. log)","var(--ac)"]],log:1},
+ close:{n:"S&P 500",s:[["close","Precio (esc. log)","var(--ac)"]],log:1}
+};
+let H=[],D=[],ALL=[],mode="erp",y0=0,y1=0,rows=[],geo={};
+const j=u=>fetch(u+"?"+Date.now()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+Promise.all([j("history.json"),j("data.json")]).then(([h,d])=>{
+ H=h;D=d;D.forEach(r=>{if(r.eps==null)r.eps=+(r.close/r.per).toFixed(2)});
+ const cut=D.length?D[0].date.slice(0,7):"9999";
+ ALL=H.filter(r=>r.date<cut).concat(D);
+ if(!ALL.length){$("f").textContent="Sin datos todavía: ejecuta el workflow una vez.";return}
+ init();
+});
+function init(){
+ const L=ALL[ALL.length-1],yrs=ALL.map(r=>+r.date.slice(0,4)),mn=yrs[0],mx=yrs[yrs.length-1];
+ const p=ALL.filter(r=>r.erp<=L.erp).length/ALL.length*100;
+ const dd=D.length>1?L.erp-D[D.length-2].erp:null;
+ $("f").textContent="Último dato: "+fd(L.date);
+ $("top").innerHTML=`<div class="hero"><span>Prima de riesgo (último dato)</span><b>${f(L.erp)}%</b><span>${dd==null?"":(dd>=0?"▲ ":"▼ ")+f(Math.abs(dd))+" pp vs. sesión anterior"}</span></div>
+ <div class="grid"><div class="c"><small>S&P 500 (cierre)</small><b>${f(L.close)}</b></div><div class="c"><small>PER</small><b>${f(L.per,1)}</b></div>
+ <div class="c"><small>EPS (12 meses)</small><b>$${f(L.eps)}</b></div><div class="c"><small>Earnings yield</small><b>${f(L.ey)}%</b></div>
+ <div class="c"><small>Bono EE.UU. 10a</small><b>${f(L.us10y)}%</b></div><div class="c"><small>Percentil ERP histórica</small><b>${f(p,0)}</b></div></div>`;
+ const lastD=D.length?D[D.length-1].date:L.date,hl=H.length?H[H.length-1].date:null;
+ $("foot").innerHTML=`<b>Última actualización:</b> cierre del ${fd(lastD)}${hl?" · histórico mensual (Shiller) hasta "+hl.slice(5)+"/"+hl.slice(0,4):""}.<br>ERP = (EPS/precio) − bono 10a. Hasta la línea punteada: medias mensuales de Shiller; después, cierres diarios con el PER de SPY (Yahoo Finance), por lo que puede haber un pequeño salto metodológico.`;
+ $("tabs").innerHTML=Object.keys(SER).map(k=>`<button data-m="${k}">${SER[k].n}</button>`).join("");
+ const mark=()=>document.querySelectorAll("[data-m]").forEach(b=>b.classList.toggle("on",b.dataset.m==mode));
+ document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;mark();draw()});
+ const yl=[];for(let y=mn;y<=mx;y++)yl.push(`<option>${y}</option>`);
+ $("a").innerHTML=$("b").innerHTML=yl.join("");
+ const sync=()=>{$("a").value=y0;$("b").value=y1;draw()};
+ $("a").onchange=()=>{y0=+$("a").value;if(y0>y1)y1=y0;sync()};
+ $("b").onchange=()=>{y1=+$("b").value;if(y1<y0)y0=y1;sync()};
+ document.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const r=+b.dataset.r;y0=r?Math.max(mn,mx-r):mn;y1=mx;sync()});
+ $("ch").addEventListener("pointermove",e=>{
+  const x=e.clientX-$("ch").getBoundingClientRect().left;let b=rows[0],bd=1e9;
+  for(const r of rows){const d=Math.abs(geo.X(r)-x);if(d<bd){bd=d;b=r}}
+  show(b,true)});
+ $("ch").addEventListener("pointerleave",()=>show(rows[rows.length-1],false));
+ addEventListener("resize",draw);
+ y0=Math.max(mn,mx-20);y1=mx;mark();sync();
+}
+function draw(){
+ rows=ALL.filter(r=>{const y=+r.date.slice(0,4);return y>=y0&&y<=y1});
+ const cfg=SER[mode],el=$("ch"),W=el.clientWidth||320,Hh=220,pl=42,pr=8,pt=8,pb=20;
+ if(rows.length<2){el.innerHTML="";return}
+ const tf=cfg.log?Math.log:v=>v;
+ const vals=rows.flatMap(r=>cfg.s.map(s=>r[s[0]])).filter(v=>v!=null);
+ const mn=Math.min(...vals),mx=Math.max(...vals),a=tf(mn),rg=(tf(mx)-a)||1;
+ const t0=ts(rows[0]),tr=(ts(rows[rows.length-1])-t0)||1;
+ const X=r=>pl+(ts(r)-t0)/tr*(W-pl-pr),Y=v=>pt+(1-(tf(v)-a)/rg)*(Hh-pt-pb);
+ let s="";
+ for(let i=0;i<4;i++){const v=cfg.log?Math.exp(a+rg*i/3):mn+(mx-mn)*i/3,y=Y(v);
+  s+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" class="g"/><text x="${pl-4}" y="${y+4}" text-anchor="end" class="t">${f(v,cfg.log?0:1)}</text>`}
+ if(!cfg.log&&mn<0&&mx>0)s+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" class="z"/>`;
+ const fr=D.length?rows.find(r=>r.date===D[0].date):null;
+ if(fr)s+=`<line x1="${X(fr)}" x2="${X(fr)}" y1="${pt}" y2="${Hh-pb}" class="z"/>`;
+ cfg.s.forEach(([k,,c])=>{const pts=rows.filter(r=>r[k]!=null).map(r=>X(r).toFixed(1)+","+Y(r[k]).toFixed(1)).join(" ");
+  s+=`<polyline points="${pts}" fill="none" style="stroke:${c}" stroke-width="1.8" stroke-linejoin="round"/>`});
+ s+=`<text x="${pl}" y="${Hh-4}" class="t">${rows[0].date.slice(0,4)}</text><text x="${W-pr}" y="${Hh-4}" text-anchor="end" class="t">${rows[rows.length-1].date.slice(0,4)}</text>`;
+ s+=`<line id="cur" y1="${pt}" y2="${Hh-pb}" class="c0" style="display:none"/>`;
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}">${s}</svg>`;
+ geo={X};show(rows[rows.length-1],false);
+}
+function show(r,mark){
+ const cfg=SER[mode],c=$("cur");
+ if(c){if(mark){c.setAttribute("x1",geo.X(r));c.setAttribute("x2",geo.X(r));c.style.display=""}else c.style.display="none"}
+ $("ro").innerHTML="<b>"+(r.date.length==7?r.date.slice(5)+"/"+r.date.slice(0,4):fd(r.date))+"</b> · "+cfg.s.map(s=>s[1]+": <b>"+f(r[s[0]],2)+"</b>").join(" · ");
+}
 </script></body></html>

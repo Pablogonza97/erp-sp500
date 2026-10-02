@@ -16,7 +16,7 @@ def main():
     if not per:
         raise SystemExit("Yahoo no devolvió PER hoy")
     ey = 100 / per                       # earnings yield en %
-    fila = {"date": dia, "close": round(cierre, 2), "per": round(per, 2),
+    fila = {"date": dia, "close": round(cierre, 2), "per": round(per, 2), "eps": round(cierre / per, 2),
             "ey": round(ey, 2), "us10y": round(bono, 2), "erp": round(ey - bono, 2)}
     hist = json.loads(FILE.read_text()) if FILE.exists() else []
     hist = [h for h in hist if h["date"] != dia] + [fila]
