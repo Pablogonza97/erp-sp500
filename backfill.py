@@ -15,17 +15,18 @@ LOCAL = ["ie_data.xls", "ie_data.xlsx"]                        # alternativa: s√
 def parsear(raw):
     df = pd.read_excel(io.BytesIO(raw), sheet_name="Data", header=None)
     i = df.index[df[0].astype(str).str.strip().eq("Date")][0]
-    d = df.iloc[i + 1:, [0, 1, 3, 6]].apply(pd.to_numeric, errors="coerce")
-    d.columns = ["date", "p", "e", "rf"]
+    d = df.iloc[i + 1:, [0, 1, 3, 4, 6]].apply(pd.to_numeric, errors="coerce")
+    d.columns = ["date", "p", "e", "cpi", "rf"]
     rows = []
-    for x in d.dropna().itertuples():
+    for x in d.dropna(subset=["date", "p", "e", "rf"]).itertuples():
         y = int(x.date); m = int(round((x.date - y) * 100))
         if not 1 <= m <= 12 or x.e <= 0:
             continue
         ey = 100 * x.e / x.p
         rows.append({"date": f"{y}-{m:02d}", "close": round(x.p, 2), "eps": round(x.e, 2),
                      "per": round(x.p / x.e, 2), "ey": round(ey, 2),
-                     "us10y": round(x.rf, 2), "erp": round(ey - x.rf, 2)})
+                     "us10y": round(x.rf, 2), "erp": round(ey - x.rf, 2),
+                     "cpi": None if pd.isna(x.cpi) else round(x.cpi, 3)})
     return rows
 
 

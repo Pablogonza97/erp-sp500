@@ -24,10 +24,12 @@ button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 #ch{touch-action:pan-y}svg{display:block}
 .g{stroke:var(--bd);stroke-width:1}.z{stroke:var(--mut);stroke-dasharray:3 3;stroke-width:1}
 .t{fill:var(--mut);font-size:10px}.c0{stroke:var(--mut);stroke-width:1}
+table{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:8px 4px;text-align:right;font-size:14px;border-top:1px solid var(--bd)}th{color:var(--mut);font-weight:400;font-size:12px;border:0}td:first-child,th:first-child{text-align:left}td small{display:block;color:var(--mut);font-size:11px}.up{color:#16a34a}.dn{color:#dc2626}
 .n{color:var(--mut);font-size:12px;margin-top:14px;line-height:1.5}
 </style></head><body>
 <h1>Prima de riesgo del equity · S&P 500</h1><div class="sub" id="f">Cargando…</div>
 <div id="top"></div>
+<div id="ret"></div>
 <div class="ch">
  <div class="tabs" id="tabs"></div>
  <div class="tabs"><select id="a"></select><select id="b"></select>
@@ -47,10 +49,10 @@ const SER={
  eps:{n:"EPS",s:[["eps","EPS ($, esc. log)","var(--ac)"]],log:1},
  close:{n:"S&P 500",s:[["close","Precio (esc. log)","var(--ac)"]],log:1}
 };
-let H=[],D=[],ALL=[],mode="erp",y0=0,y1=0,rows=[],geo={};
+let R=null,H=[],D=[],ALL=[],mode="erp",y0=0,y1=0,rows=[],geo={};
 const j=u=>fetch(u+"?"+Date.now()).then(r=>r.ok?r.json():[]).catch(()=>[]);
-Promise.all([j("history.json"),j("data.json")]).then(([h,d])=>{
- H=h;D=d;D.forEach(r=>{if(r.eps==null)r.eps=+(r.close/r.per).toFixed(2)});
+Promise.all([j("history.json"),j("data.json"),j("returns.json")]).then(([h,d,rt])=>{
+ R=rt;H=h;D=d;D.forEach(r=>{if(r.eps==null)r.eps=+(r.close/r.per).toFixed(2)});
  const cut=D.length?D[0].date.slice(0,7):"9999";
  ALL=H.filter(r=>r.date<cut).concat(D);
  if(!ALL.length){$("f").textContent="Sin datos todavía: ejecuta el workflow una vez.";return}
@@ -67,6 +69,7 @@ function init(){
  <div class="c"><small>Bono EE.UU. 10a</small><b>${f(L.us10y)}%</b></div><div class="c"><small>Percentil ERP histórica</small><b>${f(p,0)}</b></div></div>`;
  const lastD=D.length?D[D.length-1].date:L.date,hl=H.length?H[H.length-1].date:null;
  $("foot").innerHTML=`<b>Última actualización:</b> cierre del ${fd(lastD)}${hl?" · histórico mensual (Shiller) hasta "+hl.slice(5)+"/"+hl.slice(0,4):""}.<br>ERP = (EPS/precio) − bono 10a. Hasta la línea punteada: medias mensuales de Shiller; después, cierres diarios con el PER de SPY (Yahoo Finance), por lo que puede haber un pequeño salto metodológico.`;
+ ret();
  $("tabs").innerHTML=Object.keys(SER).map(k=>`<button data-m="${k}">${SER[k].n}</button>`).join("");
  const mark=()=>document.querySelectorAll("[data-m]").forEach(b=>b.classList.toggle("on",b.dataset.m==mode));
  document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;mark();draw()});
@@ -84,6 +87,14 @@ function init(){
  $("ch").addEventListener("pointerleave",()=>show(rows[rows.length-1],false));
  addEventListener("resize",draw);
  y0=Math.max(mn,mx-20);y1=mx;mark();sync();
+}
+function ret(){
+ const P=R&&R.periodos;if(!P)return;
+ const c=v=>v==null?"":v>=0?"up":"dn",p=v=>v==null?"–":(v>=0?"+":"")+f(v)+"%";
+ const cel=(v,a)=>`<td class="${c(v)}">${p(v)}${a!=null?`<small>${p(a)} /año</small>`:""}</td>`;
+ $("ret").innerHTML=`<div class="ch"><b>Rentabilidad del S&P 500</b><table><tr><th></th><th>Nominal</th><th>Real</th></tr>`+
+  P.map(x=>`<tr><td>${x.n}</td>${cel(x.nom,x.ann_nom)}${cel(x.real,x.ann_real)}</tr>`).join("")+
+  `</table><div class="n">Hasta el cierre del ${fd(R.date)}. Solo variación de precio, sin dividendos. Real = descontando la inflación (IPC de EE.UU. según Shiller, que llega con 1-2 meses de retraso, por lo que la cifra real reciente puede salir algo optimista).</div></div>`;
 }
 function draw(){
  rows=ALL.filter(r=>{const y=+r.date.slice(0,4);return y>=y0&&y<=y1});
