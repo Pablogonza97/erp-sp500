@@ -1,29 +1,29 @@
 {
- "date": "2026-11-19",
+ "date": "2026-11-20",
  "periodos": [
   {
    "n": "En el año (YTD)",
-   "nom": 4.83,
-   "real": 1.72
+   "nom": 0.95,
+   "real": -2.04
   },
   {
    "n": "1 año",
-   "nom": 8.03,
-   "real": 4.85
+   "nom": 5.68,
+   "real": 2.57
   },
   {
    "n": "5 años",
-   "nom": 52.74,
-   "real": 27.13,
-   "ann_nom": 8.84,
-   "ann_real": 4.92
+   "nom": 47.09,
+   "real": 22.43,
+   "ann_nom": 8.02,
+   "ann_real": 4.13
   },
   {
    "n": "10 años",
-   "nom": 228.88,
-   "real": 137.69,
-   "ann_nom": 12.64,
-   "ann_real": 9.04
+   "nom": 216.71,
+   "real": 128.9,
+   "ann_nom": 12.22,
+   "ann_real": 8.63
   }
  ]
 }
